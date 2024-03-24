@@ -225,3 +225,9 @@
 .remove-image-icon:hover {
   background-color: #a23c3c;
 }
+
+.capture-button.disabled {
+  background-color: #ccc;
+  color: #666;
+  cursor: not-allowed;
+}

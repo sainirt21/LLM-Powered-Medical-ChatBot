@@ -5,22 +5,30 @@ import './MainContent.css';
 const MainContent = () => {
   const [chatStarted, setChatStarted] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
-  const [greetingAcknowledged, setGreetingAcknowledged] = useState(false);
   const [currentTagIndex, setCurrentTagIndex] = useState(-1);
   const [userInput, setUserInput] = useState('');
   const [shuffledTags, setShuffledTags] = useState([]);
   const [isListening, setIsListening] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const speechRecognition = useRef(null);
+  const inputRef = useRef(null);
   const [inputDisabled, setInputDisabled] = useState(false);
-  
+
+  const [userName, setUserName] = useState('');
+  const [userAddress, setUserAddress] = useState('');
+  const [collectingUserInfo, setCollectingUserInfo] = useState(false);
+  const [userInfoStep, setUserInfoStep] = useState('');
+  const chatAreaRef = useRef(null);
+
+
   const initialTags = ['symptom', 'lifestyle', 'genetic'];
 
   useEffect(() => {
-    if (chatStarted && greetingAcknowledged && currentTagIndex >= 0 && shuffledTags.length > currentTagIndex) {
-      handleApiCall(shuffledTags[currentTagIndex]);
+    if (chatStarted && !collectingUserInfo && currentTagIndex >= 0 && shuffledTags.length > currentTagIndex) {
+        handleApiCall(shuffledTags[currentTagIndex]);
     }
-  }, [chatStarted, greetingAcknowledged, shuffledTags, currentTagIndex]);
+    // eslint-disable-next-line
+  }, [chatStarted, collectingUserInfo, shuffledTags, currentTagIndex]);
 
   const lazyInitSpeechRecognition = useCallback(() => {
     if (speechRecognition.current !== null) return;
@@ -52,24 +60,14 @@ const MainContent = () => {
       speechRecognition.current?.stop();
     }
     setIsListening(!isListening);
+    inputRef.current.focus();
   }, [isListening]);
 
   const startChat = () => {
-    const shuffled = shuffleArray([...initialTags]);
-    shuffled.push('report');
-    setShuffledTags(shuffled);
+    setCollectingUserInfo(true);
+    setUserInfoStep('name');
+    setChatMessages([{ type: 'bot', text: "Type your name" }]);
     setChatStarted(true);
-    setGreetingAcknowledged(false); 
-    setChatMessages([{ type: 'bot', text: "Hi, I am your doctor. How can I help you today?" }]);
-    lazyInitSpeechRecognition();
-  };
-
-  const shuffleArray = (array) => {
-    for (let i = array.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [array[i], array[j]] = [array[j], array[i]];
-    }
-    return array;
   };
 
   const stateMappings = useMemo(() => ({
@@ -87,7 +85,6 @@ const MainContent = () => {
   };
 
   const [apiStates, setApiStates] = useState({
-    greeting_question: "Hi, I am your doctor. How can I help you today?",
     greeting_response: "", 
     symptom_questions: [],
     lifestyle_questions: [],
@@ -101,7 +98,7 @@ const MainContent = () => {
 
   const fetchContext = async (userResponses) => {
     try {
-      const response = await fetch('http://192.168.29.30:8090/process_responses', {
+      const response = await fetch('http://34.29.182.251:8090/process_responses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_responses: userResponses }),
@@ -109,8 +106,21 @@ const MainContent = () => {
       const data = await response.json();
       return data.response;
     } catch (error) {
-      console.error("Error fetching context: ", error);
       return "ERROR";
+    }
+  };
+
+  const fetchClinicSuggestions = async (userAddress) => {
+    try {
+      const response = await fetch('http://34.29.182.251:9070/nearest_clinic', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: userAddress }),
+      });
+      const data = await response.json();
+      return data.nearest_clinic.join(",\n");
+    } catch (error) {
+      return "Error fetching clinic suggestions";
     }
   };
 
@@ -124,28 +134,56 @@ const MainContent = () => {
         genetic: apiStates.user_genetic.join(", ")
       };
       context = await fetchContext(userResponses);
+      let prompt = await generatePromptForTag(userName, tag, currentTagIndex, shuffledTags, apiStates, stateMappings, userStateMappings, context);
+      try {
+        const response = await fetch('http://34.29.182.251:8080/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: prompt, tag: tag, context: context}),
+        });
+        const data = await response.json();
+        setChatMessages((chatMessages) => [...chatMessages, { type: 'bot', text: data.response }]);
+        setInputDisabled(true);
+        setIsListening(false); 
+        setTimeout(async () => {
+          const clinicSuggestions = await fetchClinicSuggestions(userAddress);
+          setChatMessages((chatMessages) => [...chatMessages, { type: 'bot', text: `You can visit any of the following clinics:\n ${clinicSuggestions}` }]);
+        }, 2000);
+      } catch (error) {
+        setChatMessages((chatMessages) => [...chatMessages, { type: 'bot', text: 'There was an error processing your request.' }]);
+        setInputDisabled(true);
+        setIsListening(false);
+        setTimeout(async () => {
+          const clinicSuggestions = await fetchClinicSuggestions(userAddress);
+          setChatMessages((chatMessages) => [...chatMessages, { type: 'bot', text: `You can visit any of the following clinics:\n ${clinicSuggestions}` }]);
+          setIsLoading(false);
+          setInputDisabled(true);
+          setIsListening(false); 
+        }, 2000);
+      }
     }
-    let prompt = await generatePromptForTag(tag, currentTagIndex, shuffledTags, apiStates, stateMappings, userStateMappings, context);
-    try {
-      const response = await fetch('http://192.168.29.30:8080/predict', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: prompt, tag: tag, context: context}),
-      });
-      const data = await response.json();
-      const botQuestion = { type: 'bot', text: data.response };
-      setChatMessages((chatMessages) => [...chatMessages, botQuestion]);
-      setApiStates((prevStates) => ({
-        ...prevStates,
-        [stateMappings[tag]]: [...prevStates[stateMappings[tag]], data.response],
-      }));
-    } catch (error) {
-      setChatMessages((chatMessages) => [...chatMessages, { type: 'bot', text: 'There was an error processing your request.' }]);
+    else{
+      let prompt = await generatePromptForTag(userName,tag, currentTagIndex, shuffledTags, apiStates, stateMappings, userStateMappings, context);
+      try {
+        const response = await fetch('http://192.168.29.30:8080/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: prompt, tag: tag, context: context}),
+        });
+        const data = await response.json();
+        const botQuestion = { type: 'bot', text: data.response };
+        setChatMessages((chatMessages) => [...chatMessages, botQuestion]);
+        setApiStates((prevStates) => ({
+          ...prevStates,
+          [stateMappings[tag]]: [...prevStates[stateMappings[tag]], data.response],
+        }));
+      } catch (error) {
+        setChatMessages((chatMessages) => [...chatMessages, { type: 'bot', text: 'There was an error processing your request.' }]);
+      }
     }
-    finally {
-      setIsLoading(false);
-    }
-  }, [currentTagIndex, shuffledTags, apiStates]);
+    setIsLoading(false);
+    // eslint-disable-next-line
+  }, [userName,userAddress, currentTagIndex, shuffledTags, apiStates]);
 
   const handleInputChange = useCallback((event) => {
     setUserInput(event.target.value);
@@ -153,35 +191,61 @@ const MainContent = () => {
 
   const handleSendMessage = useCallback(() => {
     if (!userInput.trim() || isLoading) return;
-  
     setInputDisabled(true);
-  
     const newUserMessage = { type: 'user', text: userInput };
     setChatMessages(chatMessages => [...chatMessages, newUserMessage]);
-  
-    if (currentTagIndex === -1) {
-      setGreetingAcknowledged(true);
-      setApiStates(prevStates => ({
-        ...prevStates,
-        greeting_response: userInput,
-      }));
-      setCurrentTagIndex(0);
-    } else {
-      const currentTag = shuffledTags[currentTagIndex];
-      const userStateKey = userStateMappings[currentTag];
-      setApiStates(prevStates => ({
-        ...prevStates,
-        [userStateKey]: [...prevStates[userStateKey], userInput],
-      }));
-  
-      const nextIndex = currentTagIndex + 1;
-      if (nextIndex < shuffledTags.length) {
-        setCurrentTagIndex(nextIndex);
+
+    if (collectingUserInfo) {
+      if (userInfoStep === 'name') {
+        setUserName(userInput);
+        setUserInfoStep('address');
+        setChatMessages(messages => [...messages, { type: 'bot', text: "Type your address" }]);
+        setUserInput(''); 
+      } else if (userInfoStep === 'address') {
+        setUserAddress(userInput);
+        setCollectingUserInfo(false);
+        const shuffled = shuffleArray([...initialTags]);
+        shuffled.push('report');
+        setShuffledTags(shuffled);
+        setChatMessages(messages => [...messages, { type: 'bot', text: `Hi ${userName}, I am your doctor. How can I help you today?` }]);
+        setChatStarted(true);
+        setUserInput('');
       }
-    }
-  
+    } else {
+        if (currentTagIndex === -1) {
+            setApiStates(prevStates => ({
+              ...prevStates,
+              greeting_response: userInput,
+            }));
+            setCurrentTagIndex(0);
+          } else {
+            const currentTag = shuffledTags[currentTagIndex];
+            const userStateKey = userStateMappings[currentTag];
+            setApiStates(prevStates => ({
+              ...prevStates,
+              [userStateKey]: [...prevStates[userStateKey], userInput],
+            }));
+        
+            const nextIndex = currentTagIndex + 1;
+            if (nextIndex < shuffledTags.length) {
+              setCurrentTagIndex(nextIndex);
+            }
+          }    
+        }
+
     setUserInput('');
-  }, [userInput, shuffledTags, currentTagIndex, greetingAcknowledged, isLoading]);
+    setInputDisabled(false);
+    inputRef.current.focus();
+    // eslint-disable-next-line
+  }, [userInput, isLoading, chatMessages, collectingUserInfo, userInfoStep, userName, currentTagIndex, shuffledTags]);
+
+  const shuffleArray = (array) => {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+  };
 
   useEffect(() => {
     if (isLoading) {
@@ -197,57 +261,83 @@ const MainContent = () => {
     setCurrentTagIndex(-1);
     setUserInput('');
     setShuffledTags([]);
-    setGreetingAcknowledged(false);
+    setIsListening(false);
+    setIsLoading(false);
+    setInputDisabled(false);
+    setCollectingUserInfo(false);
+    setUserInfoStep('');
+    setUserName('');
+    setUserAddress('');
   }, []);
   
+  useEffect(() => {
+    if (chatAreaRef.current) {
+      chatAreaRef.current.scrollTop = chatAreaRef.current.scrollHeight;
+    }
+  }, [chatMessages]);
+  
 
-  return (
-    <div className="main-content">
-      {!chatStarted && (
-        <button className="start-chat-button" onClick={startChat}>
-          <FaPlay className="start-icon" /> Start Chat
-        </button>
-      )}
-      {chatStarted && (
-        <>
-          <div className="chat-area">
+    return (
+        <div className="main-content">
+            {!chatStarted && (
+            <button className="start-chat-button" onClick={startChat}>
+            <FaPlay className="start-icon" /> Start Chat
+            </button>
+            )}
+            {(chatStarted || collectingUserInfo) && (
+            <>
+            <div className="chat-area" ref={chatAreaRef}>
             {chatMessages.map((msg, index) => (
               <div key={index} className={`chat-message ${msg.type}-message`}>
                 {msg.type === 'user' ? <FaUser className="message-icon user-icon" /> : <FaRobot className="message-icon bot-icon" />}
-                <div>{msg.text}</div>
+                <div>
+                  {msg.text.includes('\n') ? (
+                    msg.text.split('\n').map((line, lineIndex) => (
+                      <React.Fragment key={lineIndex}>
+                        {line}{lineIndex < msg.text.split('\n').length - 1 && <br />}
+                      </React.Fragment>
+                    ))
+                  ) : msg.text}
+                </div>
               </div>
             ))}
-          </div>
-          <div className="input-area">
-            <FaMicrophone className={`mic-icon ${isListening ? 'listening' : ''}`} onClick={toggleListening} />
-            <input
-              type="text"
-              placeholder="Type your response..."
-              className="prompt-input"
-              value={userInput}
-              onChange={handleInputChange}
-              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-              disabled={inputDisabled}
-            />
-            <button className={`send-button ${isLoading ? 'disabled' : ''}`} onClick={handleSendMessage} disabled={isLoading}>
-              {isLoading ? <FaHourglassHalf className="hourglass" /> : <FaPaperPlane />}
-            </button>
-          </div>
-        </>
-      )}
-      {chatStarted && (
-        <button className="reset-chat-button" onClick={resetChat}>
-          Reset Chat
-        </button>
-      )}
-    </div>
-  );
+            </div>
+            <div className={`input-area ${inputDisabled ? 'disabled' : ''}`}>
+                <FaMicrophone className={`mic-icon ${isListening ? 'listening' : ''} ${inputDisabled ? 'disabled' : ''}`} onClick={toggleListening} />
+                <input
+                  ref={inputRef}
+                  type="text"
+                  placeholder="Type your response..."
+                  className={`prompt-input ${inputDisabled ? 'disabled' : ''}`}
+                  value={userInput}
+                  onChange={handleInputChange}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  disabled={inputDisabled}
+                />
+                <button
+                  className={`send-button ${isLoading || inputDisabled ? 'disabled' : ''}`}
+                  onClick={handleSendMessage}
+                  disabled={isLoading || inputDisabled}
+                >
+                  {isLoading ? <FaHourglassHalf className="hourglass" /> : <FaPaperPlane />}
+                </button>
+            </div>
+            </>
+            )}
+            {chatStarted && (
+                <button className="reset-chat-button" onClick={resetChat}>
+                Reset Chat
+                </button>
+            )}
+        </div>
+    );
 };
+
 export default MainContent;
 
- function generatePromptForTag(tag, currentTagIndex, shuffledTags, apiStates, stateMappings, userStateMappings,fetchedContext) {
+ function generatePromptForTag(userName,tag, currentTagIndex, shuffledTags, apiStates, stateMappings, userStateMappings,fetchedContext) {
   let prompt = "";
-  const greetingQuestion = apiStates.greeting_question;
+  const greetingQuestion =  `Hi ${userName}, I am your doctor. How can I help you today?`;
   const greetingResponse = apiStates.greeting_response;
 
   if (currentTagIndex === 0) {
@@ -309,6 +399,5 @@ export default MainContent;
               ...
               END OF RESPONSE`;
   }
-
   return prompt;
 }

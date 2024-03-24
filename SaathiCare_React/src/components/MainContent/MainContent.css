@@ -134,3 +134,15 @@
   color: #4caf50;
   animation: pulse 1.5s infinite;
 }
+
+.input-area.disabled {
+  background: #f0f0f0;
+  pointer-events: none;
+}
+
+.prompt-input.disabled,
+.send-button.disabled,
+.mic-icon.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
