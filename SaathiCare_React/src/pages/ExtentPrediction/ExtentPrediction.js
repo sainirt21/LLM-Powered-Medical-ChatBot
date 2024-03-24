@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Plot from 'react-plotly.js';
 import './ExtentPrediction.css';
+import FloatingAssistant from '../FloatingAssistant/FloatingAssistant';
 
 const ExtentPrediction = () => {
   const [data, setData] = useState([]);
@@ -12,6 +13,7 @@ const ExtentPrediction = () => {
   const [diseaseData, setDiseaseData] = useState([]);
   const [projectedCases, setProjectedCases] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
+  
 
   const rowsPerPage = 10;
 
@@ -91,6 +93,7 @@ const transformDataForGroupedBarChart = (data, column) => {
 
   return (
     <div className="ExtentPrediction">
+    <FloatingAssistant />
       <h1>Extend Prediction Page</h1>
       <h2>Preview of CureBay Data</h2>
       <div className="table-container">
