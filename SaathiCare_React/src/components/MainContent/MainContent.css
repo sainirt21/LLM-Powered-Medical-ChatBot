@@ -28,6 +28,7 @@
   align-items: center;
   gap: 0.5rem;
   word-break: break-word;
+  max-width: 70%;
 }
 
 .user-message {
@@ -43,6 +44,12 @@
 
 .message-icon {
   font-size: 1.5rem;
+  font-size: 1.5rem;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .user-icon {
@@ -145,4 +152,13 @@
 .mic-icon.disabled {
   opacity: 0.5;
   pointer-events: none;
+}
+
+.chat-message-text {
+  max-width: 100%; 
+}
+
+.chat-message .message-icon {
+  width: 24px; 
+  height: 24px;
 }

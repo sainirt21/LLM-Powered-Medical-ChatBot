@@ -98,6 +98,9 @@ const MainContent = () => {
 
   const fetchContext = async (userResponses) => {
     try {
+      setIsLoading(false);
+      setInputDisabled(true);
+      setIsListening(false); 
       const response = await fetch('http://34.29.182.251:8090/process_responses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -143,22 +146,15 @@ const MainContent = () => {
         });
         const data = await response.json();
         setChatMessages((chatMessages) => [...chatMessages, { type: 'bot', text: data.response }]);
-        setInputDisabled(true);
-        setIsListening(false); 
         setTimeout(async () => {
           const clinicSuggestions = await fetchClinicSuggestions(userAddress);
           setChatMessages((chatMessages) => [...chatMessages, { type: 'bot', text: `You can visit any of the following clinics:\n ${clinicSuggestions}` }]);
         }, 2000);
       } catch (error) {
         setChatMessages((chatMessages) => [...chatMessages, { type: 'bot', text: 'There was an error processing your request.' }]);
-        setInputDisabled(true);
-        setIsListening(false);
         setTimeout(async () => {
           const clinicSuggestions = await fetchClinicSuggestions(userAddress);
           setChatMessages((chatMessages) => [...chatMessages, { type: 'bot', text: `You can visit any of the following clinics:\n ${clinicSuggestions}` }]);
-          setIsLoading(false);
-          setInputDisabled(true);
-          setIsListening(false); 
         }, 2000);
       }
     }
@@ -287,20 +283,19 @@ const MainContent = () => {
             {(chatStarted || collectingUserInfo) && (
             <>
             <div className="chat-area" ref={chatAreaRef}>
-            {chatMessages.map((msg, index) => (
-              <div key={index} className={`chat-message ${msg.type}-message`}>
-                {msg.type === 'user' ? <FaUser className="message-icon user-icon" /> : <FaRobot className="message-icon bot-icon" />}
-                <div>
-                  {msg.text.includes('\n') ? (
-                    msg.text.split('\n').map((line, lineIndex) => (
+              {chatMessages.map((msg, index) => (
+                <div key={index} className={`chat-message ${msg.type}-message`}>
+                  {msg.type === 'user' ? <FaUser className="message-icon user-icon" /> : <FaRobot className="message-icon bot-icon" />}
+                  <div className="chat-message-text">
+                    {msg.text.split('\n').map((line, lineIndex, array) => (
                       <React.Fragment key={lineIndex}>
-                        {line}{lineIndex < msg.text.split('\n').length - 1 && <br />}
+                        {line !== '.' ? line : null}
+                        {lineIndex !== array.length - 1 && line !== '.' && <br />}
                       </React.Fragment>
-                    ))
-                  ) : msg.text}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
             </div>
             <div className={`input-area ${inputDisabled ? 'disabled' : ''}`}>
                 <FaMicrophone className={`mic-icon ${isListening ? 'listening' : ''} ${inputDisabled ? 'disabled' : ''}`} onClick={toggleListening} />
