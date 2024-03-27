@@ -15,6 +15,8 @@ const MainContent = () => {
   const [inputDisabled, setInputDisabled] = useState(false);
 
   const [userName, setUserName] = useState('');
+  const [userAge, setUserAge] = useState('');
+  const [userGender, setUserGender] = useState('');
   const [userAddress, setUserAddress] = useState('');
   const [collectingUserInfo, setCollectingUserInfo] = useState(false);
   const [userInfoStep, setUserInfoStep] = useState('');
@@ -194,6 +196,16 @@ const MainContent = () => {
     if (collectingUserInfo) {
       if (userInfoStep === 'name') {
         setUserName(userInput);
+        setUserInfoStep('age');
+        setChatMessages(messages => [...messages, { type: 'bot', text: "Type your age" }]);
+        setUserInput(''); 
+      } else if (userInfoStep === 'age') {
+        setUserAge(userInput);
+        setUserInfoStep('gender');
+        setChatMessages(messages => [...messages, { type: 'bot', text: "Type your gender" }]);
+        setUserInput(''); 
+      } else if (userInfoStep === 'gender') {
+        setUserGender(userInput);
         setUserInfoStep('address');
         setChatMessages(messages => [...messages, { type: 'bot', text: "Type your address" }]);
         setUserInput(''); 
@@ -263,6 +275,8 @@ const MainContent = () => {
     setCollectingUserInfo(false);
     setUserInfoStep('');
     setUserName('');
+    setUserAge('');
+    setUserGender('');
     setUserAddress('');
   }, []);
   
