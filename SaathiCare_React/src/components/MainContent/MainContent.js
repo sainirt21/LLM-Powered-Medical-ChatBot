@@ -21,7 +21,8 @@ const MainContent = () => {
   const [collectingUserInfo, setCollectingUserInfo] = useState(false);
   const [userInfoStep, setUserInfoStep] = useState('');
   const chatAreaRef = useRef(null);
-
+  const [showFeedbackOptions, setShowFeedbackOptions] = useState(false);
+  const [finalBotMessageShown, setFinalBotMessageShown] = useState(false);
 
   const initialTags = ['symptom', 'lifestyle', 'genetic'];
 
@@ -151,13 +152,10 @@ const MainContent = () => {
         setTimeout(async () => {
           const clinicSuggestions = await fetchClinicSuggestions(userAddress);
           setChatMessages((chatMessages) => [...chatMessages, { type: 'bot', text: `You can visit any of the following clinics:\n ${clinicSuggestions}` }]);
+          setShowFeedbackOptions(true);
         }, 2000);
       } catch (error) {
         setChatMessages((chatMessages) => [...chatMessages, { type: 'bot', text: 'There was an error processing your request.' }]);
-        setTimeout(async () => {
-          const clinicSuggestions = await fetchClinicSuggestions(userAddress);
-          setChatMessages((chatMessages) => [...chatMessages, { type: 'bot', text: `You can visit any of the following clinics:\n ${clinicSuggestions}` }]);
-        }, 2000);
       }
     }
     else{
@@ -247,6 +245,16 @@ const MainContent = () => {
     // eslint-disable-next-line
   }, [userInput, isLoading, chatMessages, collectingUserInfo, userInfoStep, userName, currentTagIndex, shuffledTags]);
 
+  const handleFeedbackResponse = (response) => {
+    setChatMessages(chatMessages => [...chatMessages, { type: 'user', text: response }]);
+    setShowFeedbackOptions(false);
+    setTimeout(() => {
+      setChatMessages(chatMessages => [...chatMessages, { type: 'bot', text: "Thank you for your feedback!" }]);
+      setFinalBotMessageShown(true);
+    }, 500);
+  };
+  
+
   const shuffleArray = (array) => {
     for (let i = array.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -310,8 +318,20 @@ const MainContent = () => {
                   </div>
                 </div>
               ))}
+              {showFeedbackOptions && (
+                <div className="chat-message bot-message">
+                  <FaRobot className="message-icon bot-icon" />
+                  <div>Was this chat helpful?</div>
+                </div>
+              )}
+              {showFeedbackOptions && (
+                <div className="feedback-options">
+                  <button onClick={() => handleFeedbackResponse('Yes')}>Yes</button>
+                  <button onClick={() => handleFeedbackResponse('No')}>No</button>
+                </div>
+              )}
             </div>
-            <div className={`input-area ${inputDisabled ? 'disabled' : ''}`}>
+            <div className={`input-area ${inputDisabled  || showFeedbackOptions ? 'disabled' : ''}`}>
                 <FaMicrophone className={`mic-icon ${isListening ? 'listening' : ''} ${inputDisabled ? 'disabled' : ''}`} onClick={toggleListening} />
                 <input
                   ref={inputRef}
