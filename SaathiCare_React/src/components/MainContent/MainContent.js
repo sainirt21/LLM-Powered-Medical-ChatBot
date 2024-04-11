@@ -10,7 +10,9 @@ const MainContent = () => {
   const [shuffledTags, setShuffledTags] = useState([]);
   const [isListening, setIsListening] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const speechRecognition = useRef(null);
+  const [language, setLanguage] = useState('en-US');
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
   const inputRef = useRef(null);
   const [inputDisabled, setInputDisabled] = useState(false);
 
@@ -33,38 +35,64 @@ const MainContent = () => {
     // eslint-disable-next-line
   }, [chatStarted, collectingUserInfo, shuffledTags, currentTagIndex]);
 
-  const lazyInitSpeechRecognition = useCallback(() => {
-    if (speechRecognition.current !== null) return;
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.lang = 'en-US';
-      recognition.interimResults = false;
-      recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        setUserInput(transcript);
-      };
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-      speechRecognition.current = recognition;
+  const startisListening = useCallback(() => {
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(stream => {
+        mediaRecorderRef.current = new MediaRecorder(stream);
+        audioChunksRef.current = [];
+
+        mediaRecorderRef.current.addEventListener("dataavailable", (event) => {
+          audioChunksRef.current.push(event.data);
+        });
+
+        mediaRecorderRef.current.addEventListener("stop", async () => {
+          if (audioChunksRef.current && audioChunksRef.current.length > 0) {
+            const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+            const formData = new FormData();
+            formData.append("audio", audioBlob);
+            formData.append("language", language);
+        
+            try {
+              const response = await fetch('http://34.29.182.251:8090/speech_to_text', {
+                method: 'POST',
+                body: formData,
+              });
+              const data = await response.json();
+              if (data.transcribedText) {
+                setUserInput(data.transcribedText);
+              } else {
+                console.error('No transcription available:', data);
+              }
+            } catch (error) {
+              console.error('Error:', error);
+            }
+          } else {
+            console.log('No audio data available to send.');
+          }
+        });
+
+        mediaRecorderRef.current.start();
+        setIsListening(true);
+      })
+      .catch(error => console.log(error));
+}, [language]);
+
+  const stopisListening = useCallback(() => {
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop();
+      setIsListening(false);
     }
   }, []);
 
-  useEffect(() => {
-    lazyInitSpeechRecognition();
-  }, [lazyInitSpeechRecognition]);
-
   const toggleListening = useCallback(() => {
     if (!isListening) {
-      speechRecognition.current?.start();
+      startisListening();
     } else {
-      speechRecognition.current?.stop();
+      stopisListening();
     }
-    setIsListening(!isListening);
     inputRef.current.focus();
-  }, [isListening]);
+  }, [isListening, startisListening, stopisListening]);
+
 
   const startChat = () => {
     setCollectingUserInfo(true);
@@ -245,6 +273,14 @@ const MainContent = () => {
     // eslint-disable-next-line
   }, [userInput, isLoading, chatMessages, collectingUserInfo, userInfoStep, userName, currentTagIndex, shuffledTags]);
 
+  const handleLanguageChange = useCallback((event) => {
+    setLanguage(event.target.value);
+    if (isListening) {
+      stopisListening();
+    }
+    setUserInput('');
+  }, [isListening, stopisListening]);
+
   const handleFeedbackResponse = (response) => {
     setChatMessages(chatMessages => [...chatMessages, { type: 'user', text: response }]);
     setShowFeedbackOptions(false);
@@ -332,6 +368,11 @@ const MainContent = () => {
               )}
             </div>
             <div className={`input-area ${inputDisabled  || showFeedbackOptions ? 'disabled' : ''}`}>
+              <select className="language-select" value={language} onChange={handleLanguageChange}>
+                <option value="en-US">English</option>
+                <option value="es-ES">Spanish</option>
+                <option value="or-IN">Odia</option>
+              </select>
                 <FaMicrophone className={`mic-icon ${isListening ? 'listening' : ''} ${inputDisabled ? 'disabled' : ''}`} onClick={toggleListening} />
                 <input
                   ref={inputRef}

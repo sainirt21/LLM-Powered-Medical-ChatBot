@@ -73,6 +73,7 @@
   border: 1px solid #ccc;
   border-radius: 20px;
   margin-right: 0.5rem;
+  margin-bottom: 0px;
 }
 
 .send-button {
@@ -182,4 +183,25 @@
 
 .feedback-options button:hover {
   background-color: #45a049;
+}
+
+.input-area .language-select {
+  padding: 0.5rem;
+  border-radius: 20px;
+  border: 1px solid #ccc;
+  background-color: white;
+  color: #333;
+  cursor: pointer;
+  outline: none;
+  width: 10%;
+  padding: 8px;
+  margin-bottom: 0px;
+}
+
+.input-area .language-select:focus {
+  border-color: #0056b3;
+}
+
+.input-area .language-select option {
+  padding: 0.5rem;
 }
