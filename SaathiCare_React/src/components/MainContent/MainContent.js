@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { FaRobot, FaUser, FaPlay, FaMicrophone, FaPaperPlane, FaHourglassHalf } from 'react-icons/fa';
+import hark from 'hark';
 import './MainContent.css';
 
 const MainContent = () => {
@@ -13,9 +14,10 @@ const MainContent = () => {
   const [language, setLanguage] = useState('en-US');
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+  const [translatedInput, setTranslatedInput] = useState('');
+  const [lastInputMethod, setLastInputMethod] = useState('typing');
   const inputRef = useRef(null);
   const [inputDisabled, setInputDisabled] = useState(false);
-
   const [userName, setUserName] = useState('');
   const [userAge, setUserAge] = useState('');
   const [userGender, setUserGender] = useState('');
@@ -35,9 +37,32 @@ const MainContent = () => {
     // eslint-disable-next-line
   }, [chatStarted, collectingUserInfo, shuffledTags, currentTagIndex]);
 
+  const stopisListening = useCallback(() => {
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop();
+      setIsListening(false);
+    }
+  }, []);
+
   const startisListening = useCallback(() => {
     navigator.mediaDevices.getUserMedia({ audio: true })
       .then(stream => {
+        const speechEvents = hark(stream, {});
+
+        speechEvents.on('speaking', () => {
+          console.log('speaking');
+        });
+
+        let silenceTimer = null;
+        speechEvents.on('stopped_speaking', () => {
+          if (silenceTimer) clearTimeout(silenceTimer);
+          silenceTimer = setTimeout(() => {
+            console.log('Silence for 5 seconds, stopping recording');
+            stopisListening();
+            speechEvents.stop();
+          }, 3000);
+        });
+
         mediaRecorderRef.current = new MediaRecorder(stream);
         audioChunksRef.current = [];
 
@@ -51,15 +76,17 @@ const MainContent = () => {
             const formData = new FormData();
             formData.append("audio", audioBlob);
             formData.append("language", language);
-        
+
             try {
-              const response = await fetch('http://34.29.182.251:8090/speech_to_text', {
+              const response = await fetch('http://34.29.182.251:9080/speech_to_text', {
                 method: 'POST',
                 body: formData,
               });
               const data = await response.json();
-              if (data.transcribedText) {
+              if (data.transcribedText && data.translatedText) {
                 setUserInput(data.transcribedText);
+                setTranslatedInput(data.translatedText.replace(/[.|]\s*/g, ''));
+                setLastInputMethod('speech'); 
               } else {
                 console.error('No transcription available:', data);
               }
@@ -74,15 +101,8 @@ const MainContent = () => {
         mediaRecorderRef.current.start();
         setIsListening(true);
       })
-      .catch(error => console.log(error));
-}, [language]);
-
-  const stopisListening = useCallback(() => {
-    if (mediaRecorderRef.current) {
-      mediaRecorderRef.current.stop();
-      setIsListening(false);
-    }
-  }, []);
+      .catch(error => console.log('Error accessing the microphone:', error));
+  }, [language, stopisListening]);
 
   const toggleListening = useCallback(() => {
     if (!isListening) {
@@ -92,7 +112,6 @@ const MainContent = () => {
     }
     inputRef.current.focus();
   }, [isListening, startisListening, stopisListening]);
-
 
   const startChat = () => {
     setCollectingUserInfo(true);
@@ -211,32 +230,35 @@ const MainContent = () => {
 
   const handleInputChange = useCallback((event) => {
     setUserInput(event.target.value);
+    setTranslatedInput('');
+    setLastInputMethod('typing');
   }, []);
 
   const handleSendMessage = useCallback(() => {
     if (!userInput.trim() || isLoading) return;
     setInputDisabled(true);
+    const inputForBackend = lastInputMethod === 'speech' ? translatedInput : userInput;
     const newUserMessage = { type: 'user', text: userInput };
     setChatMessages(chatMessages => [...chatMessages, newUserMessage]);
 
     if (collectingUserInfo) {
       if (userInfoStep === 'name') {
-        setUserName(userInput);
+        setUserName(inputForBackend);
         setUserInfoStep('age');
         setChatMessages(messages => [...messages, { type: 'bot', text: "Type your age" }]);
         setUserInput(''); 
       } else if (userInfoStep === 'age') {
-        setUserAge(userInput);
+        setUserAge(inputForBackend);
         setUserInfoStep('gender');
         setChatMessages(messages => [...messages, { type: 'bot', text: "Type your gender" }]);
         setUserInput(''); 
       } else if (userInfoStep === 'gender') {
-        setUserGender(userInput);
+        setUserGender(inputForBackend);
         setUserInfoStep('address');
         setChatMessages(messages => [...messages, { type: 'bot', text: "Type your address" }]);
         setUserInput(''); 
       } else if (userInfoStep === 'address') {
-        setUserAddress(userInput);
+        setUserAddress(inputForBackend);
         setCollectingUserInfo(false);
         const shuffled = shuffleArray([...initialTags]);
         shuffled.push('report');
@@ -249,7 +271,7 @@ const MainContent = () => {
         if (currentTagIndex === -1) {
             setApiStates(prevStates => ({
               ...prevStates,
-              greeting_response: userInput,
+              greeting_response: inputForBackend,
             }));
             setCurrentTagIndex(0);
           } else {
@@ -257,7 +279,7 @@ const MainContent = () => {
             const userStateKey = userStateMappings[currentTag];
             setApiStates(prevStates => ({
               ...prevStates,
-              [userStateKey]: [...prevStates[userStateKey], userInput],
+              [userStateKey]: [...prevStates[userStateKey], inputForBackend],
             }));
         
             const nextIndex = currentTagIndex + 1;
@@ -268,10 +290,11 @@ const MainContent = () => {
         }
 
     setUserInput('');
+    setTranslatedInput(''); 
     setInputDisabled(false);
     inputRef.current.focus();
     // eslint-disable-next-line
-  }, [userInput, isLoading, chatMessages, collectingUserInfo, userInfoStep, userName, currentTagIndex, shuffledTags]);
+  }, [translatedInput, userInput, isLoading, chatMessages, collectingUserInfo, userInfoStep, userName, currentTagIndex, shuffledTags]);
 
   const handleLanguageChange = useCallback((event) => {
     setLanguage(event.target.value);
@@ -312,6 +335,8 @@ const MainContent = () => {
     setChatMessages([]);
     setCurrentTagIndex(-1);
     setUserInput('');
+    setTranslatedInput('');
+    setLastInputMethod('typing');
     setShuffledTags([]);
     setIsListening(false);
     setIsLoading(false);
@@ -322,7 +347,19 @@ const MainContent = () => {
     setUserAge('');
     setUserGender('');
     setUserAddress('');
-  }, []);
+    setApiStates({
+        greeting_response: "", 
+        symptom_questions: [],
+        lifestyle_questions: [],
+        genetic_questions: [],
+        report_questions: [],
+        user_symptoms: [],
+        user_lifestyle: [],
+        user_genetic: [],
+        user_report: [],
+    });
+}, []);
+
   
   useEffect(() => {
     if (chatAreaRef.current) {
@@ -372,6 +409,7 @@ const MainContent = () => {
                 <option value="en-US">English</option>
                 <option value="es-ES">Spanish</option>
                 <option value="or-IN">Odia</option>
+                <option value="hi-IN">Hindi</option>
               </select>
                 <FaMicrophone className={`mic-icon ${isListening ? 'listening' : ''} ${inputDisabled ? 'disabled' : ''}`} onClick={toggleListening} />
                 <input
