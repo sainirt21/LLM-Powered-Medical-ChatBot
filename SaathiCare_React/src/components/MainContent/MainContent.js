@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { FaRobot, FaUser, FaPlay, FaMicrophone, FaPaperPlane, FaHourglassHalf } from 'react-icons/fa';
+import { FaRobot, FaUser, FaPlay, FaMicrophone, FaPaperPlane, FaHourglassHalf, FaFileUpload } from 'react-icons/fa';
 import hark from 'hark';
 import './MainContent.css';
 
@@ -27,6 +27,10 @@ const MainContent = () => {
   const chatAreaRef = useRef(null);
   const [showFeedbackOptions, setShowFeedbackOptions] = useState(false);
   const [finalBotMessageShown, setFinalBotMessageShown] = useState(false);
+  const [reportUploadAsked, setReportUploadAsked] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [waitingForReportUploadResponse, setWaitingForReportUploadResponse] = useState(false);
+  const [shouldCallApiForReport, setShouldCallApiForReport] = useState(false);
 
   const initialTags = ['symptom', 'lifestyle', 'genetic'];
 
@@ -54,7 +58,7 @@ const MainContent = () => {
     }
     const simpleLanguageCode = simplifyLanguageCode(languageCode);
     try {
-      const response = await fetch('http://192.168.31.124:8090/translate_to_language', {
+      const response = await fetch('http://192.168.1.19:8090/translate_to_language', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: text, target_language: simpleLanguageCode })
@@ -71,12 +75,15 @@ const MainContent = () => {
     }
   };  
 
+      // eslint-disable-next-line
   const handleBotMessage = async (message) => {
     setIsLoading(true);
     const translatedMessage = await translateText(message, language);
-    setChatMessages((prevMessages) => [...prevMessages, { type: 'bot', text: translatedMessage }]);
+    const textMessage = typeof translatedMessage === 'string' ? translatedMessage : 'Invalid message format';
+    setChatMessages((prevMessages) => [...prevMessages, { type: 'bot', text: textMessage }]);
     setIsLoading(false);
-  };
+};
+
 
   const stopisListening = useCallback(() => {
     if (mediaRecorderRef.current) {
@@ -119,7 +126,7 @@ const MainContent = () => {
             formData.append("language", language);
 
             try {
-              const response = await fetch('http://192.168.31.124:8090/speech_to_text', {
+              const response = await fetch('http://192.168.1.19:8090/speech_to_text', {
                 method: 'POST',
                 body: formData,
               });
@@ -219,6 +226,7 @@ const MainContent = () => {
   };
 
   const handleApiCall = useCallback(async (tag) => {
+    if (waitingForReportUploadResponse) return;
     setIsLoading(true);
     let context = '';
     if (tag === 'report') {
@@ -227,6 +235,7 @@ const MainContent = () => {
         symptom: apiStates.user_symptoms.join(", "),
         genetic: apiStates.user_genetic.join(", ")
       };
+      setInputDisabled(false);
       context = await fetchContext(userResponses);
       let prompt = await generatePromptForTag(userName, tag, currentTagIndex, shuffledTags, apiStates, stateMappings, userStateMappings, context);
       try {
@@ -266,7 +275,12 @@ const MainContent = () => {
     }
     setIsLoading(false);
     // eslint-disable-next-line
-  }, [userName,userAddress, currentTagIndex, shuffledTags, apiStates]);
+  }, [userName, userAddress, currentTagIndex, shuffledTags, apiStates, waitingForReportUploadResponse, fetchContext, fetchClinicSuggestions, handleBotMessage]);
+
+  useEffect(() => {
+    setInputDisabled(isLoading || waitingForReportUploadResponse || showUploadModal || reportUploadAsked);
+  }, [isLoading, waitingForReportUploadResponse, showUploadModal, reportUploadAsked]);
+  
 
   const handleInputChange = useCallback((event) => {
     setUserInput(event.target.value);
@@ -274,13 +288,85 @@ const MainContent = () => {
     setLastInputMethod('typing');
   }, []);
 
+  const askForReportUpload = useCallback(() => {
+    handleBotMessage("Would you like to upload a report? Please click Yes or No.");
+    setReportUploadAsked(true);
+    setWaitingForReportUploadResponse(true);
+    setInputDisabled(true);
+  }, [handleBotMessage]);
+  
+  useEffect(() => {
+    if (!waitingForReportUploadResponse && shouldCallApiForReport) {
+      handleApiCall('report');
+      setShouldCallApiForReport(false);
+    }
+  }, [waitingForReportUploadResponse, shouldCallApiForReport, handleApiCall]);
+  
+  const handleReportUploadResponse = useCallback((response) => {
+    setReportUploadAsked(false);
+    setInputDisabled(false);
+    setWaitingForReportUploadResponse(false);
+  
+    if (response === 'Yes') {
+      setShowUploadModal(true);
+    } else {
+      setChatMessages((prevMessages) => [...prevMessages, { type: 'user', text: response }]);
+      setShouldCallApiForReport(true);
+    }
+  }, []);
+
+const handleFileUpload = useCallback(async (file) => {
+  setShowUploadModal(false);
+  setInputDisabled(false);
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+      setChatMessages((prevMessages) => [...prevMessages, { type: 'user', text: `Uploaded Report: ${file.name}` }]);
+      const uploadResponse = await fetch('https://34.93.4.171:9070/pdf_summarizer', {
+          method: 'POST',
+          body: formData,
+      });
+      const uploadData = await uploadResponse.json();
+      if (uploadData && typeof uploadData.response === 'string') {
+        await handleBotMessage(uploadData.response);
+        setTimeout(async () => {
+          const clinicSuggestions = await fetchClinicSuggestions(userAddress);
+          await handleBotMessage(`You can visit any of the following clinics:\n ${clinicSuggestions}`);
+          setShowFeedbackOptions(true);
+        }, 2000);
+    } else {
+        await handleBotMessage("Received data from report analysis is not in expected format or is missing.");
+        handleApiCall('report');
+    }
+  } catch (error) {
+      console.error('Failed to upload report:', error);
+      await handleBotMessage("There was an error in report analysis.");
+      handleApiCall('report');
+  }
+      // eslint-disable-next-line
+}, [handleApiCall, fetchClinicSuggestions, userAddress]);
+
+
+const UploadModal = () => (
+  <div className="upload-modal">
+      <input type="file" accept="application/pdf" onChange={(e) => handleFileUpload(e.target.files[0])} />
+      <button onClick={() => {
+          setShowUploadModal(false);
+          setWaitingForReportUploadResponse(true);
+          setReportUploadAsked(true);
+          setInputDisabled(true);
+      }}>Cancel</button>
+  </div>
+);
+
   const handleSendMessage = useCallback(async () => {
-    if (!userInput.trim() || isLoading) return;
+    if (waitingForReportUploadResponse || isLoading || !userInput.trim()) return;
     setInputDisabled(true);
     const inputForBackend = lastInputMethod === 'speech' ? translatedInput : userInput;
     const newUserMessage = { type: 'user', text: userInput };
     setChatMessages(chatMessages => [...chatMessages, newUserMessage]);
-
+    setUserInput('');
     if (collectingUserInfo) {
       if (userInfoStep === 'name') {
         setUserName(inputForBackend);
@@ -325,6 +411,10 @@ const MainContent = () => {
             const nextIndex = currentTagIndex + 1;
             if (nextIndex < shuffledTags.length) {
               setCurrentTagIndex(nextIndex);
+              if (shuffledTags[nextIndex] === 'report') {
+                  askForReportUpload();
+                  return;
+              }
             }
           }    
         }
@@ -336,7 +426,13 @@ const MainContent = () => {
     // eslint-disable-next-line
   }, [translatedInput, userInput, isLoading, chatMessages, collectingUserInfo, userInfoStep, userName, currentTagIndex, shuffledTags]);
 
-  const handleLanguageChange = useCallback((event) => {
+  useEffect(() => {
+    if (inputRef.current && !inputDisabled) {
+        inputRef.current.focus();
+    }
+}, [chatMessages, inputDisabled]);
+
+const handleLanguageChange = useCallback((event) => {
     setLanguage(event.target.value);
     if (isListening) {
       stopisListening();
@@ -402,7 +498,7 @@ const MainContent = () => {
     if (chatAreaRef.current) {
       chatAreaRef.current.scrollTop = chatAreaRef.current.scrollHeight;
     }
-  }, [chatMessages]);
+  }, [chatMessages, reportUploadAsked]);
   
 
     return (
@@ -420,7 +516,7 @@ const MainContent = () => {
             )}
             {(chatStarted || collectingUserInfo) && (
             <>
-            <div className="chat-area" ref={chatAreaRef}>
+            <div className={`chat-area ${reportUploadAsked ? 'disabled' : ''}`} ref={chatAreaRef}>
               {chatMessages.map((msg, index) => (
                 <div key={index} className={`chat-message ${msg.type}-message`}>
                   {msg.type === 'user' ? <FaUser className="message-icon user-icon" /> : <FaRobot className="message-icon bot-icon" />}
@@ -434,6 +530,13 @@ const MainContent = () => {
                   </div>
                 </div>
               ))}
+              {reportUploadAsked && (
+                <div className="feedback-options">
+                    <button onClick={() => handleReportUploadResponse('Yes')}>Yes</button>
+                    <button onClick={() => handleReportUploadResponse('No')}>No</button>
+                </div>
+            )}
+            {showUploadModal && <UploadModal />}
               {showFeedbackOptions && (
                 <div className="chat-message bot-message">
                   <FaRobot className="message-icon bot-icon" />
@@ -447,7 +550,7 @@ const MainContent = () => {
                 </div>
               )}
             </div>
-            <div className={`input-area ${inputDisabled  || showFeedbackOptions ? 'disabled' : ''}`}>
+            <div className={`input-area ${inputDisabled || reportUploadAsked || showUploadModal || showFeedbackOptions ? 'disabled' : ''}`}>
                 <FaMicrophone className={`mic-icon ${isListening ? 'listening' : ''} ${inputDisabled ? 'disabled' : ''}`} onClick={toggleListening} />
                 <input
                   ref={inputRef}

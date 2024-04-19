@@ -146,6 +146,7 @@
 .input-area.disabled {
   background: #f0f0f0;
   pointer-events: none;
+  opacity: 0.5;
 }
 
 .prompt-input.disabled,
@@ -204,4 +205,39 @@
 
 .input-area .language-select option {
   padding: 0.5rem;
+}
+
+.upload-modal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: white;
+  padding: 2rem;
+  border-radius: 10px;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+  z-index: 100;
+}
+
+.upload-modal input[type="file"] {
+  margin-bottom: 1rem;
+  cursor: pointer;
+}
+
+.upload-modal button {
+  padding: 0.5rem 1rem;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.upload-modal button:hover {
+  background-color: #45a049;
 }

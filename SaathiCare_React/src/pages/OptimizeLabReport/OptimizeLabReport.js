@@ -21,19 +21,19 @@ const handleSendPDF = async () => {
     if (!selectedPDF || !fileInputRef.current.files[0]) return;
 
     setIsLoading(true);
-setChatMessages(prevMessages => [
-    ...prevMessages, 
-    { type: 'user', content: selectedPDF, contentType: 'pdf' }
-]);
+    setChatMessages(prevMessages => [
+        ...prevMessages, 
+        { type: 'user', content: selectedPDF, contentType: 'pdf' }
+    ]);
 
     const formData = new FormData();
     formData.append('file', fileInputRef.current.files[0]);
 
-        setSelectedPDF(null); 
-        if (fileInputRef.current) fileInputRef.current.value = '';
+    setSelectedPDF(null); 
+    if (fileInputRef.current) fileInputRef.current.value = '';
 
     try {
-        const response = await fetch('http://34.29.182.251:9080/predict', {
+        const response = await fetch('http://192.168.1.19:8090/predict', {
             method: 'POST',
             body: formData,
         });
@@ -42,45 +42,20 @@ setChatMessages(prevMessages => [
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const result = await response.json();
-        let analysisResult = `<strong>Analysis Result: </strong>`;
-        switch (result.prediction_class) {
-            case "No DR":
-                analysisResult += "No Diabetic Retinopathy detected";
-                break;
-            case "Mild":
-                analysisResult += "Mild Diabetic Retinopathy";
-                break;
-            case "Moderate":
-                analysisResult += "Moderate Diabetic Retinopathy";
-                break;
-            case "Severe":
-                analysisResult += "Severe Diabetic Retinopathy";
-                break;
-            case "Proliferative DR":
-                analysisResult += "Proliferative Diabetic Retinopathy detected";
-                break;
-            default:
-                analysisResult += "Analysis Result: Unknown";
-                break;
-        }
-
-        setChatMessages(prevMessages => [
-            ...prevMessages,
-            { type: 'bot', content: analysisResult, contentType: 'html', prediction: result.prediction }
-        ]);
+        setChatMessages((prevMessages) => [...prevMessages, { type: 'bot', text: result, contentType: 'text' }]);
 
     } catch (error) {
         console.error("Error submitting image:", error);
         setChatMessages(prevMessages => [
             ...prevMessages,
-            { type: 'bot', content: "There was a problem analyzing the pdf.", contentType: 'text', }
+            { type: 'bot', content: "There was a problem analyzing the pdf.", contentType: 'text' }
         ]);
     }
 
     setIsLoading(false);
 };  
 
-  const handleClearImage = () => {
+  const handleClearPDF = () => {
     setSelectedPDF(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -96,9 +71,7 @@ setChatMessages(prevMessages => [
                 <FaFilePdf className="pdf-icon" />
                 <span className="pdf-name">{msg.content}</span>
             </div>
-          ) : msg.contentType === 'html' ? (
-              <div className={`message-text prediction-${msg.prediction}`} dangerouslySetInnerHTML={{ __html: msg.content }}></div> 
-          ) : (
+          ): (
               <div className="message-text">{msg.content}</div>
           )}
         </div>
@@ -114,7 +87,7 @@ setChatMessages(prevMessages => [
           {selectedPDF && (
             <>
               <div className="preview-text">{selectedPDF}</div>
-              <span className="remove-image-icon" onClick={handleClearImage}>✖</span>
+              <span className="remove-image-icon" onClick={handleClearPDF}>✖</span>
             </>
           )}
         </div>
