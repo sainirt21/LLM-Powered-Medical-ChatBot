@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { FaRobot, FaUser, FaPlay, FaMicrophone, FaPaperPlane, FaHourglassHalf, FaFileUpload } from 'react-icons/fa';
+import { FaRobot, FaUser, FaPlay, FaMicrophone, FaPaperPlane, FaHourglassHalf } from 'react-icons/fa';
 import hark from 'hark';
 import './MainContent.css';
 
@@ -31,6 +31,7 @@ const MainContent = () => {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [waitingForReportUploadResponse, setWaitingForReportUploadResponse] = useState(false);
   const [shouldCallApiForReport, setShouldCallApiForReport] = useState(false);
+  const [reportContext, setReportContext] = useState('');
 
   const initialTags = ['symptom', 'lifestyle', 'genetic'];
 
@@ -58,7 +59,7 @@ const MainContent = () => {
     }
     const simpleLanguageCode = simplifyLanguageCode(languageCode);
     try {
-      const response = await fetch('http://192.168.1.19:8090/translate_to_language', {
+      const response = await fetch('https://34.93.4.171:9070/translate_to_language', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: text, target_language: simpleLanguageCode })
@@ -105,7 +106,7 @@ const MainContent = () => {
         speechEvents.on('stopped_speaking', () => {
           if (silenceTimer) clearTimeout(silenceTimer);
           silenceTimer = setTimeout(() => {
-            console.log('Silence for 5 seconds, stopping recording');
+            console.log('Silence for 3 seconds, stopping recording');
             stopisListening();
             speechEvents.stop();
           }, 3000);
@@ -126,7 +127,7 @@ const MainContent = () => {
             formData.append("language", language);
 
             try {
-              const response = await fetch('http://192.168.1.19:8090/speech_to_text', {
+              const response = await fetch('https://34.93.4.171:9070/speech_to_text', {
                 method: 'POST',
                 body: formData,
               });
@@ -199,13 +200,17 @@ const MainContent = () => {
       setIsLoading(false);
       setInputDisabled(true);
       setIsListening(false); 
-      const response = await fetch('http://34.29.182.251:8090/process_responses', {
+      const response = await fetch('https://34.93.4.171:9070/process_responses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_responses: userResponses }),
       });
       const data = await response.json();
-      return data.response;
+      let context= data.response;
+      if (reportContext) {
+        context += `\nPatients Lab Reports: ${reportContext}`;
+      }
+      return context;
     } catch (error) {
       return "ERROR";
     }
@@ -213,7 +218,7 @@ const MainContent = () => {
 
   const fetchClinicSuggestions = async (userAddress) => {
     try {
-      const response = await fetch('http://34.29.182.251:9070/nearest_clinic', {
+      const response = await fetch('https://34.93.4.171:9070/nearest_clinic', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ address: userAddress }),
@@ -239,7 +244,7 @@ const MainContent = () => {
       context = await fetchContext(userResponses);
       let prompt = await generatePromptForTag(userName, tag, currentTagIndex, shuffledTags, apiStates, stateMappings, userStateMappings, context);
       try {
-        const response = await fetch('http://34.29.182.251:8080/predict', {
+        const response = await fetch('https://34.93.4.171:9070/predict', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ question: prompt, tag: tag, context: context}),
@@ -258,7 +263,7 @@ const MainContent = () => {
     else{
       let prompt = await generatePromptForTag(userName,tag, currentTagIndex, shuffledTags, apiStates, stateMappings, userStateMappings, context);
       try {
-        const response = await fetch('http://34.29.182.251:8080/predict', {
+        const response = await fetch('https://34.93.4.171:9070/predict', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ question: prompt, tag: tag, context: context}),
@@ -329,12 +334,10 @@ const handleFileUpload = useCallback(async (file) => {
       });
       const uploadData = await uploadResponse.json();
       if (uploadData && typeof uploadData.response === 'string') {
+        setReportContext(uploadData.response);
         await handleBotMessage(uploadData.response);
-        setTimeout(async () => {
-          const clinicSuggestions = await fetchClinicSuggestions(userAddress);
-          await handleBotMessage(`You can visit any of the following clinics:\n ${clinicSuggestions}`);
-          setShowFeedbackOptions(true);
-        }, 2000);
+        handleApiCall('report');
+
     } else {
         await handleBotMessage("Received data from report analysis is not in expected format or is missing.");
         handleApiCall('report');
@@ -350,7 +353,7 @@ const handleFileUpload = useCallback(async (file) => {
 
 const UploadModal = () => (
   <div className="upload-modal">
-      <input type="file" accept="application/pdf" onChange={(e) => handleFileUpload(e.target.files[0])} />
+      <input type="file" accept="application/pdf,application/json" onChange={(e) => handleFileUpload(e.target.files[0])} />
       <button onClick={() => {
           setShowUploadModal(false);
           setWaitingForReportUploadResponse(true);
