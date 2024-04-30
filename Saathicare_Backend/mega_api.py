@@ -650,14 +650,14 @@ def speech_to_text():
 def translate_to_language():
     try:
         data = request.get_json()
-        text = data.get('text')
+        text = data.get('text').replace('\n', '{}')
         target_language = data.get('target_language')
 
         if not text or not target_language:
             return jsonify({"error": "Missing text or target_language parameter"}), 400
 
         translation = translate_client.translate(text, target_language=target_language)
-        translated_text = translation['translatedText']
+        translated_text = translation['translatedText'].replace('{}', '\n')
 
         return jsonify({"translatedText": translated_text}), 200
     except Exception as e:
