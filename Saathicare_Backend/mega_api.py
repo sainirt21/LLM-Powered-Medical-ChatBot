@@ -55,9 +55,9 @@ import os
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = 'caresaathi_servicefile.json'
 
 # uri = "bolt://localhost:7687"
-uri = "neo4j+s://78e30e00.databases.neo4j.io"
+uri = "neo4j+s://21c7fc89.databases.neo4j.io"
 username = "neo4j"
-password = "rbSRjgroav3_0bhoT_jvxBkCHu-oOxf2k5CCKIAA8Qo"
+password = "Z3_iVqR93fjG55OEjzhx1N_hUaKEAEDJb3c8sU2BQPg"
 
 
 # Hardcoded IDs
