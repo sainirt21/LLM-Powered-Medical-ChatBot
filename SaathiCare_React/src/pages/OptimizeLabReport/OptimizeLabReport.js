@@ -77,7 +77,14 @@ const OptimizeLabReport = () => {
                   <span className="pdf-name">{msg.content}</span>
               </div>
             ): (
-                <div className="message-text">{msg.content}</div>
+                <div className="message-text">
+                  {msg.content && msg.content.split('\n').map((line, lineIndex, array) => (
+                      <React.Fragment key={lineIndex}>
+                        {line !== '.' ? line : null}
+                        {lineIndex !== array.length - 1 && line !== '.' && <br />}
+                      </React.Fragment>
+                    ))}
+                </div>
             )}
           </div>
         ))}

@@ -50,6 +50,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .user-icon {
@@ -240,4 +241,19 @@
 
 .upload-modal button:hover {
   background-color: #45a049;
+}
+
+.speak-icon {
+  cursor: pointer;
+  margin-left: 10px;
+  color: black; 
+  transition: color 0.3s ease;
+}
+
+.speak-icon.speaking {
+  color: #4CAF50;
+}
+
+.speak-icon:hover {
+  color: #19629e;
 }
