@@ -36,7 +36,7 @@ const MainContent = () => {
   const [yesOption, setYesOption] = useState('Yes');
   const [noOption, setNoOption] = useState('No');
 
-  const initialTags = ['symptom', 'lifestyle', 'genetic', 'medications'];
+  const initialTags = ['symptom', 'lifestyle', 'genetic', 'ongoing_medications'];
 
   const simplifyLanguageCode = (languageCode) => {
     const languageMap = {
@@ -184,7 +184,7 @@ const MainContent = () => {
     symptom: 'symptom_questions',
     lifestyle: 'lifestyle_questions',
     genetic: 'genetic_questions',
-    medications: 'medications_questions',
+    ongoing_medications: 'medications_questions',
     report: 'report_questions',
   }), []);
 
@@ -192,7 +192,7 @@ const MainContent = () => {
     symptom: 'user_symptoms',
     lifestyle: 'user_lifestyle',
     genetic: 'user_genetic',
-    medications: 'user_medications',
+    ongoing_medications: 'user_medications',
     report: 'user_report',
   };
 
@@ -255,7 +255,8 @@ const MainContent = () => {
       const userResponses = {
         lifestyle: apiStates.user_lifestyle.join(", "),
         symptom: apiStates.user_symptoms.join(", "),
-        genetic: apiStates.user_genetic.join(", ")
+        genetic: apiStates.user_genetic.join(", "),
+        ongoing_medications: apiStates.user_medications.join(", ")
       };
       setInputDisabled(false);
       context = await fetchContext(userResponses);
@@ -712,7 +713,8 @@ export default MainContent;
               Patient symptoms: ${apiStates.user_symptoms.join(", ")}.
               Lifestyle and eating habits: ${apiStates.user_lifestyle.join(", ")}.
               Family history of diseases: ${apiStates.user_genetic.join(", ")}.
-
+              User Current medications: ${apiStates.user_medications.join(", ")}.
+              
               Data Source for analysis:
               ${fetchedContext}
 
