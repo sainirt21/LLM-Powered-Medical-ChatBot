@@ -566,13 +566,13 @@ def main(tag, user_input):
     parent_names = {
         'symptom': ['List of symptoms'],
         'lifestyle': ['List of dietary habits', 'List of lifestyle habits'],
-        'genetic': ['List of family/genetic histories']
+        'genetic': ['List of family/genetic histories'],
     }
 
     relationship = {
         'symptom': 'DETAIL_SYMPTOM',
         'lifestyle': 'DETAIL_LIFESTYLE_HABIT',
-        'genetic': 'DETAIL_FAMILY_HISTORY'
+        'genetic': 'DETAIL_FAMILY_HISTORY',
     }[tag]
 
     parent_name = parent_names[tag]
@@ -602,7 +602,8 @@ def process_responses():
     # Your existing code to process user_responses and generate the response
     diseases = []
     for tag, response in user_responses.items():
-        diseases += main(tag, response)
+        if tag != 'ongoing_medications':
+            diseases += main(tag, response)
 
     diseases = list(set(diseases))
 
