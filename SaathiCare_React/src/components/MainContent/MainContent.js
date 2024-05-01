@@ -41,8 +41,6 @@ const MainContent = () => {
   const simplifyLanguageCode = (languageCode) => {
     const languageMap = {
       'en-US': 'en',
-      'es-ES': 'es',
-      'or-IN': 'or',
       'hi-IN': 'hi'
     };
     return languageMap[languageCode] || languageCode.split('-')[0];
@@ -579,8 +577,6 @@ const handleLanguageChange = useCallback((event) => {
         <div className="main-content">
           <select className="language-select" value={language} onChange={handleLanguageChange}>
                 <option value="en-US">English</option>
-                <option value="es-ES">Spanish</option>
-                <option value="or-IN">Odia</option>
                 <option value="hi-IN">Hindi</option>
               </select>
             {!chatStarted && (
