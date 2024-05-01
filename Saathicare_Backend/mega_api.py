@@ -362,15 +362,15 @@ def interactive_physician_chatbot():
         while valid_response(prediction):
             prediction = predict_vertex_ai(ENDPOINT_ID, PROJECT_ID, instance, context, tag)[0].replace('*', '').split('Genetic:')[-1].split('\n')[0].strip()
 
-    elif tag == 'medications':
+    elif tag == 'ongoing_medications':
         instance = {"prompt": question,
                 "max_tokens": 512,
                 "temperature": 1.0,
                 "top_p": 1.0,
                 "top_k": 10}
-        prediction = predict_vertex_ai(ENDPOINT_ID, PROJECT_ID, instance, context, tag)[0].replace('*', '').split('Medications:')[-1].split('\n')[0].strip()
+        prediction = predict_vertex_ai(ENDPOINT_ID, PROJECT_ID, instance, context, tag)[0].replace('*', '').split('Ongoing_medications:')[-1].split('\n')[0].strip()
         while valid_response(prediction):
-            prediction = predict_vertex_ai(ENDPOINT_ID, PROJECT_ID, instance, context, tag)[0].replace('*', '').split('Medications:')[-1].split('\n')[0].strip()
+            prediction = predict_vertex_ai(ENDPOINT_ID, PROJECT_ID, instance, context, tag)[0].replace('*', '').split('Ongoing_medications:')[-1].split('\n')[0].strip()
 
     
     elif tag == 'report':
