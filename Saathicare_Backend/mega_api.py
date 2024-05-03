@@ -385,13 +385,7 @@ def interactive_physician_chatbot():
     
     
     elif tag == 'doctor':
-        question = question.split('Based on the patient's symptoms and provided context, provide a possible diagnosis, recommended treatments, and specialists to consult.')[0] + """
-                                  Based on the patient's conversation and provided context, write a recommendation letter for a doctor.
-                                  NOTE: 1. The letter should mention patient's condition for the concerned doctor to read.
-                                  NOTE: 2. Mention patient's name in the letter if the name is in the context provided
-                                  Hello doctor,
-                                  {rest of the letter in detail} 
-                                  END OF RESPONSE"""
+        question = question.split('Based on the patient's symptoms and provided context, provide a possible diagnosis, recommended treatments, and specialists to consult.')[0] + "\nBased on the patient's conversation and provided context, write a recommendation letter for a doctor.\nNOTE: 1. The letter should mention patient's condition for the concerned doctor to read.\nNOTE: 2. Mention patient's name in the letter if the name is in the context provided\nHello doctor,\n{rest of the letter in detail} \n\nEND OF RESPONSE"
         instance = {"prompt": question,
                 "max_tokens": 512,
                 "temperature": 1.0,
