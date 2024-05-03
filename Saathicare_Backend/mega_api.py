@@ -382,7 +382,26 @@ def interactive_physician_chatbot():
         prediction = predict_vertex_ai(ENDPOINT_ID, PROJECT_ID, instance, context, tag)[0].split('END OF RESPONSE\nOutput:')[-1].strip().replace('*', '').replace('END OF RESPONSE', '').replace('"', '')
         while valid_response(prediction):
             prediction = predict_vertex_ai(ENDPOINT_ID, PROJECT_ID, instance, context, tag)[0].split('END OF RESPONSE\nOutput:')[-1].strip().replace('*', '').replace('END OF RESPONSE', '').replace('"', '')
-        
+    
+    
+    elif tag == 'doctor':
+        question = question.split('Based on the patient's symptoms and provided context, provide a possible diagnosis, recommended treatments, and specialists to consult.')[0] + """
+                                  Based on the patient's conversation and provided context, write a recommendation letter for a doctor.
+                                  NOTE: 1. The letter should mention patient's condition for the concerned doctor to read.
+                                  NOTE: 2. Mention patient's name in the letter if the name is in the context provided
+                                  Hello doctor,
+                                  {rest of the letter in detail} 
+                                  END OF RESPONSE"""
+        instance = {"prompt": question,
+                "max_tokens": 512,
+                "temperature": 1.0,
+                "top_p": 1.0,
+                "top_k": 10}
+        prediction = predict_vertex_ai(ENDPOINT_ID, PROJECT_ID, instance, context, tag)[0].split('END OF RESPONSE\nOutput:')[-1].strip().replace('*', '').replace('END OF RESPONSE', '').replace('"', '')
+        print(prediction)
+        while valid_response(prediction):
+            prediction = predict_vertex_ai(ENDPOINT_ID, PROJECT_ID, instance, context, tag)[0].split('END OF RESPONSE\nOutput:')[-1].strip().replace('*', '').replace('END OF RESPONSE', '').replace('"', '')
+            
     else:
         return jsonify({"error": "Invalid tag"}), 400
 
