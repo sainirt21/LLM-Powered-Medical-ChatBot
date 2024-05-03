@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, useContext } from 'react';
 import { FaRobot, FaUser, FaPlay, FaMicrophone, FaPaperPlane, FaHourglassHalf, FaVolumeUp } from 'react-icons/fa';
+import ReportContext from '../../contexts/ReportContext';
 import hark from 'hark';
 import './MainContent.css';
 
@@ -35,6 +36,7 @@ const MainContent = () => {
   const [speakingIndex, setSpeakingIndex] = useState(null);
   const [yesOption, setYesOption] = useState('Yes');
   const [noOption, setNoOption] = useState('No');
+  const { setReportContextData, setReportPrompt } = useContext(ReportContext);
 
   const initialTags = ['symptom', 'lifestyle', 'genetic', 'ongoing_medications'];
 
@@ -259,6 +261,8 @@ const MainContent = () => {
       setInputDisabled(false);
       context = await fetchContext(userResponses);
       let prompt = await generatePromptForTag(userName, tag, currentTagIndex, shuffledTags, apiStates, stateMappings, userStateMappings, context);
+      setReportContextData(context);
+      setReportPrompt(prompt);
       try {
         const response = await fetch('https://34.93.4.171:9070/predict', {
           method: 'POST',
