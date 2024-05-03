@@ -385,7 +385,29 @@ def interactive_physician_chatbot():
     
     
     elif tag == 'doctor':
-        question = question.split("Based on the patient's symptoms and provided context, provide a possible diagnosis, recommended treatments, and specialists to consult.")[0] + "\nBased on the patient's conversation and provided context, write a recommendation letter for a doctor.\nNOTE: 1. The letter should mention patient's condition for the concerned doctor to read.\nNOTE: 2. Mention patient's name in the letter if the name is in the context provided\nHello doctor,\n{rest of the letter in detail} \n\nEND OF RESPONSE"
+        question = question.split("Based on the patient's symptoms and provided context, provide a possible diagnosis, recommended treatments, and specialists to consult.")[0] + """
+        Based on the patient's conversation and the provided context, please compose a recommendation letter for a doctor.
+        NOTE: 1. The letter should clearly outline the patient's condition for the concerned doctor to understand.
+        NOTE: 2. Include the patient's name in the letter if it has been provided in the context.
+        
+        Hello Doctor,
+        
+        [Start with a brief introduction of the patient, mentioning the patient's name if known.]
+        
+        [Describe the patient's condition, including any diagnoses and symptoms discussed. Provide a concise summary of the medical history relevant to the condition.]
+        
+        [State the reason for the recommendation to this particular doctor or specialist. Mention any specific treatments or assessments that the patient requires, which are within the specialist's field of expertise.]
+        
+        [Conclude with a courteous closing, reiterating any urgent concerns or the importance of timely evaluation.]
+        
+        Thank you for your attention to this matter.
+        
+        Sincerely,
+        [Your Name]
+        
+        END OF RESPONSE
+        """
+
         instance = {"prompt": question,
                 "max_tokens": 512,
                 "temperature": 1.0,
