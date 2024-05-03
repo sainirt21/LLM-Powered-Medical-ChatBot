@@ -395,7 +395,31 @@ def interactive_physician_chatbot():
         print(prediction)
         while valid_response(prediction):
             prediction = predict_vertex_ai(ENDPOINT_ID, PROJECT_ID, instance, context, tag)[0].split('END OF RESPONSE\nOutput:')[-1].strip().replace('*', '').replace('END OF RESPONSE', '').replace('"', '')
-            
+    
+    elif tag == 'patient':
+        question = question.split("Based on the patient's symptoms and provided context, provide a possible diagnosis, recommended treatments, and specialists to consult.")[0] + """
+                Based on the patient's conversation and provided context, please list some precautions and healthy habits for the patient to follow until they can visit an actual doctor.
+                Write your response in strictly the following format:
+                Based on our conversation and all the data you have provided, I recommend the following precautions and habits for you to adopt until you see a doctor:
+                - {Recommendation 1: Description of the first precaution or habit.}
+                - {Recommendation 2: Description of the second precaution or habit.}
+                - {Recommendation 3: Description of the third precaution or habit.}
+                ...
+                Please ensure each recommendation is clear and actionable. 
+                
+                END OF RESPONSE
+        """
+
+        instance = {"prompt": question,
+                "max_tokens": 512,
+                "temperature": 1.0,
+                "top_p": 1.0,
+                "top_k": 10}
+        prediction = predict_vertex_ai(ENDPOINT_ID, PROJECT_ID, instance, context, tag)[0].split('END OF RESPONSE\nOutput:')[-1].strip().replace('*', '').replace('END OF RESPONSE', '').replace('"', '')
+        print(prediction)
+        while valid_response(prediction):
+            prediction = predict_vertex_ai(ENDPOINT_ID, PROJECT_ID, instance, context, tag)[0].split('END OF RESPONSE\nOutput:')[-1].strip().replace('*', '').replace('END OF RESPONSE', '').replace('"', '')
+               
     else:
         return jsonify({"error": "Invalid tag"}), 400
 
