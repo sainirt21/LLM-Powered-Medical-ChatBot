@@ -389,6 +389,7 @@ def interactive_physician_chatbot():
         Based on the patient's conversation and the provided context, please compose a recommendation letter for a doctor.
         NOTE: 1. The letter should clearly outline the patient's condition for the concerned doctor to understand.
         NOTE: 2. Include the patient's name in the letter if it has been provided in the context.
+        NOTE: 3. This will not be considered as a real letter, so don't give any note or precaution with your response.
         
         Hello Doctor,
         
