@@ -1,1 +1,1 @@
-SaathiCare Hospital Bot Application
+LLM-Powered-Medical-ChatBot Application
