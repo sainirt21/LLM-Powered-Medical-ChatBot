@@ -1,21 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import Plot from 'react-plotly.js';
 import './ExtentPrediction.css';
+import FloatingAssistant from '../FloatingAssistant/FloatingAssistant';
 
 const ExtentPrediction = () => {
   const [data, setData] = useState([]);
   const [selectedState, setSelectedState] = useState('Odisha');
   const [stateData, setStateData] = useState([]);
   const [selectedCity, setSelectedCity] = useState('');
+  // eslint-disable-next-line
   const [cityData, setCityData] = useState([]);
   const [diseaseData, setDiseaseData] = useState([]);
   const [projectedCases, setProjectedCases] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
+  
 
   const rowsPerPage = 10;
 
   useEffect(() => {
-    fetch('http://localhost:9090/load_data')
+    fetch('http://34.29.182.251:9090/load_data')
       .then(response => {
         if (!response.ok) {
           throw new Error('Network response was not ok');
@@ -44,7 +47,7 @@ const ExtentPrediction = () => {
   }, [data]);
 
   useEffect(() => {
-    fetch('http://localhost:9090/projected_cases', {
+    fetch('http://34.29.182.251:9090/projected_cases', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -61,7 +64,7 @@ const ExtentPrediction = () => {
   const handleStateChange = (event) => {
     setSelectedState(event.target.value);
   };
-
+// eslint-disable-next-line
   const handleCityChange = (event) => {
     setSelectedCity(event.target.value);
   };
@@ -90,6 +93,7 @@ const transformDataForGroupedBarChart = (data, column) => {
 
   return (
     <div className="ExtentPrediction">
+    <FloatingAssistant />
       <h1>Extend Prediction Page</h1>
       <h2>Preview of CureBay Data</h2>
       <div className="table-container">

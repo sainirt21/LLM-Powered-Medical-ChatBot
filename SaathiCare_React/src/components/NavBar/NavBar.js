@@ -31,6 +31,7 @@ function NavBar() {
   return (
     <nav className="navbar">
       <div className="navbar-brand" onClick={handleChatbotClick}>
+        <img src="https://images.crunchbase.com/image/upload/c_pad,f_auto,q_auto:eco,dpr_1/nphb0dgvm0nrzqkymgyp" alt="Logo" className="navbar-logo" />
         <span className={`navbar-heading ${isActivePath('/') ? 'active' : ''}`}>CareSaathi</span>
       </div>
       <div className="navbar-items">
@@ -38,7 +39,7 @@ function NavBar() {
           Care Saathi ChatBot
         </NavLink>
         <NavLink to="/optimize-lab-report" className="nav-item" onClick={closeDropdown}>
-          Optimize Lab Report
+          Summarize Lab Report
         </NavLink>
         <div className="nav-item dropdown" onClick={toggleDropdown} onMouseEnter={openDropdown} onMouseLeave={closeDropdown}>
           Strategic Healthcare Analytics <FaCaretDown className="dropdown-icon"/>

@@ -1,6 +1,6 @@
-# Getting Started with SaathiCare React App
+# Getting Started with Medical ChatBot App
 
-This project was bootstrapped with [SaathiCare React App](https://github.com/sainirt21/SaathiCare-React).
+This project was bootstrapped with [Medical ChatBot App].
 
 ## Available Scripts
 

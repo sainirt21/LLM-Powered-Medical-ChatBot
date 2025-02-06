@@ -29,24 +29,22 @@ body, html {
   background-color: #f4f4f4;
 }
 
-.main-content {
+.sidebar {
+  width: 250px; 
+  min-width: 150px;
+  max-width: 400px;
+  resize: horizontal;
+  overflow: auto;
+  height: 100%;
+  transition: width 0.3s; 
+}
+
+.app-body.with-sidebar {
   display: flex;
-  padding: 20px;
 }
 
-.card {
-  padding: 20px;
-  background-color: white;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  width: 45%;
-  margin: 10px;
-  text-align: center;
+.main-content {
+  flex-grow: 1;
+  overflow-y: auto;
 }
 
-.book-appointment-button {
-  padding: 10px 20px;
-  background-color: blue;
-  color: white;
-  border: none;
-  cursor: pointer;
-}

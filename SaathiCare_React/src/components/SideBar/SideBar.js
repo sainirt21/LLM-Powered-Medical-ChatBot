@@ -1,9 +1,64 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { FaChevronDown, FaChevronUp, FaNotesMedical, FaBook } from 'react-icons/fa';
+import ReportContext from '../../contexts/ReportContext';
 import './SideBar.css';
 
-const Sidebar = ({ onPromptSelect }) => {
+const Sidebar = () => {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [doctorNotesContent, setDoctorNotesContent] = useState('');
+  const [doctorNotesError, setDoctorNotesError] = useState(false);
+  const [patientEducationContent, setPatientEducationContent] = useState('');
+  const [patientEducationError, setPatientEducationError] = useState(false);
+  const { reportContextData, reportPrompt } = useContext(ReportContext);
+
+  useEffect(() => {
+    if (reportContextData && reportPrompt) {
+      fetchDoctorNotes();
+      fetchPatientEducation();
+    }
+  }, [reportContextData, reportPrompt]);
+
+  const fetchDoctorNotes = async () => {
+    try {
+      const response = await fetch('https://34.93.4.171:9070/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: reportPrompt, tag: 'doctor', context: reportContextData}),
+      });
+      const data = await response.json();
+      if (data.response && data.response.length) {
+        setDoctorNotesContent(data.response);
+        setDoctorNotesError(false);
+      } else {
+        throw new Error('No data');
+      }
+    } catch (error) {
+      console.error("Failed to fetch doctor notes:", error);
+      setDoctorNotesError(true);
+      setDoctorNotesContent('');
+    }
+  };
+
+  const fetchPatientEducation = async () => {
+    try {
+      const response = await fetch('https://34.93.4.171:9070/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: reportPrompt, tag: 'patient', context: reportContextData}),
+      });
+      const data = await response.json();
+      if (data.response && data.response.length) {
+        setPatientEducationContent(data.response);
+        setPatientEducationError(false);
+      } else {
+        throw new Error('No data');
+      }
+    } catch (error) {
+      console.error("Failed to fetch patient education content:", error);
+      setPatientEducationError(true);
+      setPatientEducationContent('');
+    }
+  };
 
   const handleClick = index => {
     setActiveIndex(activeIndex === index ? null : index);
@@ -13,17 +68,14 @@ const Sidebar = ({ onPromptSelect }) => {
     {
       title: 'Doctor notes',
       icon: <FaNotesMedical />,
-      content: [
-        'Write a one page referral letter for a [medical condition] patient to see a specialist.'
-      ]
+      content: doctorNotesContent,
+      error: doctorNotesError
     },
     {
       title: 'Patient Education',
       icon: <FaBook />,
-      content: [
-        'Create a list of frequently asked questions (FAQs) and their answers for [medical condition] patients. Frequently asked questions, containing five questions and 300 words per set.',
-        'Create a patient education pamphlet regarding [medical condition] and its treatment, no more than 300 words.'
-      ]
+      content: patientEducationContent,
+      error: patientEducationError
     }
   ];
 
@@ -39,11 +91,20 @@ const Sidebar = ({ onPromptSelect }) => {
             </span>
           </div>
           <div className={`section-content ${activeIndex === index ? 'show' : 'hide'}`}>
-            {section.content.map((text, idx) => (
-              <div key={idx} className="section-item disabled">
-                <div className="item-text">{text}</div>
+            {section.error || !section.content ? (
+              <div className="section-item disabled">
+                <div className="item-text">No Data</div>
               </div>
-            ))}
+            ) : (
+              <React.Fragment>
+                {section.content.split('\n').map((line, lineIndex, array) => (
+                  <React.Fragment key={lineIndex}>
+                    {line}
+                    {lineIndex !== array.length - 1 && <br />}
+                  </React.Fragment>
+                ))}
+              </React.Fragment>
+            )}
           </div>
         </div>
       ))}

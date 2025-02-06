@@ -28,6 +28,7 @@
   align-items: center;
   gap: 0.5rem;
   word-break: break-word;
+  max-width: 70%;
 }
 
 .user-message {
@@ -43,6 +44,13 @@
 
 .message-icon {
   font-size: 1.5rem;
+  font-size: 1.5rem;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .user-icon {
@@ -66,6 +74,7 @@
   border: 1px solid #ccc;
   border-radius: 20px;
   margin-right: 0.5rem;
+  margin-bottom: 0px;
 }
 
 .send-button {
@@ -133,4 +142,118 @@
 .listening {
   color: #4caf50;
   animation: pulse 1.5s infinite;
+}
+
+.input-area.disabled {
+  background: #f0f0f0;
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.prompt-input.disabled,
+.send-button.disabled,
+.mic-icon.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.chat-message-text {
+  max-width: 100%; 
+}
+
+.chat-message .message-icon {
+  width: 24px; 
+  height: 24px;
+}
+
+.feedback-options {
+  display: flex;
+  justify-content: right;
+  padding: 1rem;
+}
+
+.feedback-options button {
+  padding: 0.5rem 1rem;
+  margin: 0 0.5rem;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.feedback-options button:hover {
+  background-color: #45a049;
+}
+
+.input-area .language-select {
+  padding: 0.5rem;
+  border-radius: 20px;
+  border: 1px solid #ccc;
+  background-color: white;
+  color: #333;
+  cursor: pointer;
+  outline: none;
+  width: 10%;
+  padding: 8px;
+  margin-bottom: 0px;
+}
+
+.input-area .language-select:focus {
+  border-color: #0056b3;
+}
+
+.input-area .language-select option {
+  padding: 0.5rem;
+}
+
+.upload-modal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: white;
+  padding: 2rem;
+  border-radius: 10px;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+  z-index: 100;
+}
+
+.upload-modal input[type="file"] {
+  margin-bottom: 1rem;
+  cursor: pointer;
+}
+
+.upload-modal button {
+  padding: 0.5rem 1rem;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.upload-modal button:hover {
+  background-color: #45a049;
+}
+
+.speak-icon {
+  cursor: pointer;
+  margin-left: 10px;
+  color: black; 
+  transition: color 0.3s ease;
+}
+
+.speak-icon.speaking {
+  color: #4CAF50;
+}
+
+.speak-icon:hover {
+  color: #19629e;
 }

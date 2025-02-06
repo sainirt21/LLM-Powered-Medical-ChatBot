@@ -8,6 +8,7 @@ const ImageAnalytics = () => {
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const [showCameraModal, setShowCameraModal] = useState(false);
+  const [isCaptureEnabled, setIsCaptureEnabled] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const fileInputRef = useRef(null);
   const videoRef = useRef(null);
@@ -34,7 +35,7 @@ const handleSendImage = async () => {
         if (fileInputRef.current) fileInputRef.current.value = '';
 
     try {
-        const response = await fetch('http://192.168.29.30:9080/predict', {
+        const response = await fetch('http://34.29.182.251:9080/predict', {
             method: 'POST',
             body: formData,
         });
@@ -88,13 +89,18 @@ const handleSendImage = async () => {
 
   const startCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      videoRef.current.srcObject = stream;
-      setShowCameraModal(true);
-    } catch (err) {
-      console.error("Error accessing the camera: ", err);
+        setShowCameraModal(true);
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        videoRef.current.srcObject = stream;
+        setIsCaptureEnabled(false);
+        videoRef.current.onloadedmetadata = () => {
+            setIsCaptureEnabled(true); 
+        };
+    } catch (error) {
+        console.error("Error accessing the camera: ", error);
     }
-  };
+};
+
 
   const stopCamera = () => {
     if (videoRef.current && videoRef.current.srcObject) {
@@ -110,11 +116,19 @@ const handleSendImage = async () => {
     canvasRef.current.height = videoRef.current.videoHeight;
     context.drawImage(videoRef.current, 0, 0);
     canvasRef.current.toBlob(blob => {
-      const imageUrl = URL.createObjectURL(blob);
-      setSelectedImage(imageUrl);
+        const imageUrl = URL.createObjectURL(blob);
+        setSelectedImage(imageUrl);
+        blobToFile(blob, "captured_image.jpg");
     });
     stopCamera();
-  };
+};
+
+const blobToFile = (blob, fileName) => {
+    const file = new File([blob], fileName, { type: "image/jpeg", lastModified: new Date().getTime() });
+    const container = new DataTransfer();
+    container.items.add(file);
+    fileInputRef.current.files = container.files;
+};
 
   useEffect(() => {
     return () => stopCamera();
@@ -142,7 +156,7 @@ const handleSendImage = async () => {
           <FaUpload />
           <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageChange} />
         </label>
-        {/* <FaCamera className="icon camera-icon" onClick={startCamera} /> */}
+        <FaCamera className="icon camera-icon" onClick={startCamera} />
         <div className={`preview-box ${selectedImage ? '' : 'disabled'}`}>
           {selectedImage && (
             <>
@@ -159,7 +173,7 @@ const handleSendImage = async () => {
         <div className="modal">
           <div className="modal-content">
             <video ref={videoRef} autoPlay className="video-preview"></video>
-            <button className="capture-button" onClick={captureImage}>Capture</button>
+            <button className={`capture-button ${!isCaptureEnabled ? 'disabled' : ''}`} onClick={captureImage} disabled={!isCaptureEnabled}>Capture</button>
             <button className="close-modal-button" onClick={stopCamera}>Close</button>
           </div>
           <div className="modal-backdrop"></div>
