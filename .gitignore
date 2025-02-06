@@ -21,7 +21,7 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-Saathicare_Backend/caresaathi_servicefile.json
-Saathicare_Backend/api_keys.json
-Saathicare_Backend/best_diabetic_retinopathy_model.h5
-SaathiCare_React/build/static/css/main.69d2bdf0.css
+Medical_ChatBot_Backend/caresaathi_servicefile.json
+Medical_ChatBot_Backend/api_keys.json
+Medical_ChatBot_Backend/best_diabetic_retinopathy_model.h5
+Medical_ChatBot_React/build/static/css/main.69d2bdf0.css
